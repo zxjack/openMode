@@ -4,16 +4,16 @@ publish_to: 'none'
 
 version: 1.0.1+2
 
-# 适配Flutter 3.10.0的Dart 3.0.0
+# 适配Flutter 3.16.0内置的Dart 3.2.0
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.1.0
 
 dependencies:
   flutter:
     sdk: flutter
-  # 降级cupertino_icons到1.0.5（适配Dart 3.0.0）
-  cupertino_icons: ^1.0.5
-  # 以下依赖均兼容Dart 3.0.0，保留原版本
+
+  # 恢复原始版本，均兼容Dart 3.1.0+
+  cupertino_icons: ^1.0.8
   dio: ^5.4.0
   provider: ^6.1.1
   shared_preferences: ^2.2.2
@@ -30,8 +30,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  # 降级flutter_lints到2.0.0（适配Dart 3.0.0）
-  flutter_lints: ^2.0.0
+  # 恢复原始版本，兼容Dart 3.1.0+
+  flutter_lints: ^5.0.0
   json_serializable: ^6.7.1
   build_runner: ^2.4.7
   flutter_launcher_icons: ^0.13.1

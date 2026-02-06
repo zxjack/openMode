@@ -1,4 +1,4 @@
-# OpenMode安卓自动编译+自动上传Releases工作流
+# OpenMode安卓自动编译+自动上传Releases工作流（修复Flutter版本报错）
 name: Build OpenMode Android Release APK
 on:
   workflow_dispatch: # 手动触发（核心）
@@ -20,10 +20,13 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      # 修复：改用直装版本+指定架构，解决版本匹配报错
       - name: Set up Flutter 3.8.1
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.8.1'
+          architecture: x64
+          channel: 'any'
           cache: flutter
 
       - name: Install Dependencies
@@ -44,21 +47,17 @@ jobs:
             build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             build/app/outputs/flutter-apk/app-x86_64-release.apk
 
-      # 新增：自动创建Release并上传APK（关键更新）
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v2
         with:
-          # 自动生成版本号：OpenMode-v{年月日}-{时分}，避免重复
           tag_name: OpenMode-v${{ github.run_id }}
           name: OpenMode-Android-${{ github.run_id }}
-          body: 自动编译的OpenMode安卓Release版APK，适配64位/32位安卓机型
+          body: 自动编译的OpenMode安卓Release版APK（修复Flutter版本问题）
           draft: false
           prerelease: false
-          # 上传所有架构APK到Releases
           files: |
             build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
             build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             build/app/outputs/flutter-apk/app-x86_64-release.apk
         env:
-          # 自动获取GitHub仓库令牌，无需手动配置
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

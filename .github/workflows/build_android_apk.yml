@@ -1,7 +1,7 @@
-# OpenMode安卓自动编译+自动上传Releases（最终稳定可运行版）
+# OpenMode安卓自动编译（临时调试版：显示完整错误日志）
 name: Build OpenMode Android Release APK
 on:
-  workflow_dispatch: # 仅手动触发，避免自动触发干扰
+  workflow_dispatch:
   push:
     branches: [ main ]
     paths-ignore: [ 'README.md', '*.md' ]
@@ -10,7 +10,6 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
     env:
-      # 全局环境变量：禁用Flutter遥测，跳过所有交互式提示
       FLUTTER_QUIET: "true"
       PUB_ENVIRONMENT: "github-actions"
     steps:
@@ -24,33 +23,28 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # 配置Flutter 3.10.0稳定版
       - name: Set up Flutter 3.10.0
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.10.0'
           cache: flutter
 
-      # 关键修复：1. 先禁用遥测 2. pub get移除错误的-q参数，保留无交互
-      - name: Disable Flutter Telemetry & Install Dependencies
+      # 关键：移除输出屏蔽，显示完整日志
+      - name: Disable Telemetry & Install Dependencies (显示日志)
         run: |
-          # 禁用遥测（无输出，直接执行）
-          flutter config --disable-telemetry > /dev/null 2>&1
-          # 安装依赖：重定向所有输出到空，实现静默效果
-          flutter pub get > /dev/null 2>&1
+          flutter config --disable-telemetry
+          flutter pub get
 
-      # 清理项目：同样重定向输出，静默执行
       - name: Clean Project
-        run: flutter clean > /dev/null 2>&1
+        run: flutter clean
 
-      # 编译APK：非交互+忽略版本检查+静默（仅保留必要参数）
       - name: Build Release APK
         run: |
           flutter build apk --release --split-per-abi \
             --no-version-check \
-            --non-interactive > /dev/null 2>&1
+            --non-interactive
 
-      # 上传产物到Artifacts
+      # 保留产物上传（不影响调试）
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -60,13 +54,12 @@ jobs:
             build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             build/app/outputs/flutter-apk/app-x86_64-release.apk
 
-      # 上传到Releases
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: OpenMode-v${{ github.run_id }}
           name: OpenMode-Android-${{ github.run_id }}
-          body: 自动编译的OpenMode安卓Release版APK（最终稳定版，无交互）
+          body: 调试版APK（显示完整日志）
           draft: false
           prerelease: false
           files: |

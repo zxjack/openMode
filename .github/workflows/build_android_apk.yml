@@ -1,7 +1,7 @@
-# OpenMode安卓自动编译+自动上传Releases（最终修复版，Flutter 3.10.0稳定版）
+# OpenMode安卓自动编译+自动上传Releases（最终稳定版）
 name: Build OpenMode Android Release APK
 on:
-  workflow_dispatch: # 手动触发
+  workflow_dispatch: # 仅手动触发，避免自动触发干扰
   push:
     branches: [ main ]
     paths-ignore: [ 'README.md', '*.md' ]
@@ -9,6 +9,10 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+    env:
+      # 全局环境变量：禁用Flutter遥测，跳过所有交互式提示
+      FLUTTER_QUIET: "true"
+      PUB_ENVIRONMENT: "github-actions"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,23 +24,31 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # 关键修复：改用Flutter 3.10.0（稳定可下载，兼容OpenMode）
+      # 配置Flutter 3.10.0，禁用遥测
       - name: Set up Flutter 3.10.0 (稳定版)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.10.0' # 替换为3.10.0，放弃3.8.1
+          flutter-version: '3.10.0'
           cache: flutter
 
-      - name: Install Dependencies
-        run: flutter pub get
+      # 关键修复：先手动禁用遥测，再安装依赖（跳过所有交互）
+      - name: Disable Flutter Telemetry (跳过遥测提示)
+        run: |
+          flutter config --disable-telemetry
+          flutter pub get -q # -q 静默模式，无输出、无交互
 
       - name: Clean Project
-        run: flutter clean
+        run: flutter clean -q
 
-      # 编译时忽略版本兼容警告（可选，确保编译通过）
+      # 编译APK：静默模式+忽略版本检查+强制非交互
       - name: Build Release APK
-        run: flutter build apk --release --split-per-abi --no-version-check
+        run: |
+          flutter build apk --release --split-per-abi \
+            --no-version-check \
+            --quiet \
+            --non-interactive
 
+      # 上传产物到Artifacts
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -46,12 +58,13 @@ jobs:
             build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             build/app/outputs/flutter-apk/app-x86_64-release.apk
 
+      # 上传到Releases
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: OpenMode-v${{ github.run_id }}
           name: OpenMode-Android-${{ github.run_id }}
-          body: 自动编译的OpenMode安卓Release版APK（Flutter 3.10.0稳定版）
+          body: 自动编译的OpenMode安卓Release版APK（无交互、稳定版）
           draft: false
           prerelease: false
           files: |

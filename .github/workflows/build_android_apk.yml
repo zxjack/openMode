@@ -1,7 +1,7 @@
-# OpenMode安卓自动编译（临时调试版：显示完整错误日志）
+# OpenMode安卓自动编译+自动上传Releases（最终可运行版）
 name: Build OpenMode Android Release APK
 on:
-  workflow_dispatch:
+  workflow_dispatch: # 仅手动触发
   push:
     branches: [ main ]
     paths-ignore: [ 'README.md', '*.md' ]
@@ -29,22 +29,24 @@ jobs:
           flutter-version: '3.10.0'
           cache: flutter
 
-      # 关键：移除输出屏蔽，显示完整日志
-      - name: Disable Telemetry & Install Dependencies (显示日志)
+      # 修复权限+安装依赖（保留日志，便于排查）
+      - name: Prepare & Install Dependencies
         run: |
+          chmod +x $FLUTTER_ROOT/bin/flutter
           flutter config --disable-telemetry
-          flutter pub get
+          flutter pub get # 此时依赖已适配，可正常执行
 
       - name: Clean Project
         run: flutter clean
 
+      # 编译APK（适配修复后的依赖）
       - name: Build Release APK
         run: |
           flutter build apk --release --split-per-abi \
             --no-version-check \
             --non-interactive
 
-      # 保留产物上传（不影响调试）
+      # 上传产物到Artifacts
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -54,12 +56,13 @@ jobs:
             build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             build/app/outputs/flutter-apk/app-x86_64-release.apk
 
+      # 自动上传到Releases
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: OpenMode-v${{ github.run_id }}
           name: OpenMode-Android-${{ github.run_id }}
-          body: 调试版APK（显示完整日志）
+          body: 适配Flutter 3.10.0+Dart 3.0.0的稳定版APK
           draft: false
           prerelease: false
           files: |
